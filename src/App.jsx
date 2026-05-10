@@ -14,7 +14,7 @@ function App() {
       path: "/",
       element: <MainLayout />,
       children: [
-        { index: true, element: <NewsFeed /> },
+        { index: true, element: <NewsFeed /> }, //home page =>index
         { path: "profile", element: <UserPosts /> },
         { path: "*", element: <NotFound /> },
       ],
