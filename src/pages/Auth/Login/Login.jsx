@@ -1,71 +1,95 @@
-import React, { useState } from "react";
-import { Link } from "react-router";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema } from "../../../lib/ValidationSchemas/authSchema";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import { useState } from "react";
+import { loginUser } from "../../../services/authServices";
+import { Alert } from "@heroui/react";
+import { Link, useNavigate } from "react-router";
 
 const GRAD = "linear-gradient(135deg, #FF3366 0%, #FF6B9D 100%)";
 const SHADOW = "0 8px 40px rgba(255,51,102,0.13)";
-const BORDER = "1.5px solid #FFAEC9";
-const BORDER_FOCUS = "1.5px solid #FF3366";
 
-function PinkInput({ label, type = "text", icon, placeholder }) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <label
-        style={{
-          display: "block",
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: focused ? "#FF3366" : "#C084A0",
-          marginBottom: 4,
-          transition: "color .2s",
-        }}
-      >
-        {label}
-      </label>
-      <div style={{ position: "relative" }}>
-        {icon && (
-          <span
-            style={{
-              position: "absolute",
-              left: 13,
-              top: "50%",
-              transform: "translateY(-50%)",
-              fontSize: 15,
-              color: focused ? "#FF3366" : "#FFAEC9",
-              pointerEvents: "none",
-              transition: "color .2s",
-            }}
-          >
-            {icon}
-          </span>
-        )}
-        <input
-          type={type}
-          placeholder={placeholder}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
-            padding: icon ? "11px 14px 11px 38px" : "11px 14px",
-            border: focused ? BORDER_FOCUS : BORDER,
-            borderRadius: 12,
-            background: "#FFF7F9",
-            outline: "none",
-            fontSize: 14,
-            color: "#3D1A28",
-            boxShadow: focused ? "0 0 0 3px rgba(255,51,102,0.08)" : "none",
-            transition: "border .2s, box-shadow .2s",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "11px 14px",
+  border: "1.5px solid #FFAEC9",
+  borderRadius: 12,
+  background: "#FFF7F9",
+  outline: "none",
+  fontSize: 14,
+  color: "#3D1A28",
+};
+
+const labelStyle = {
+  display: "block",
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "#C084A0",
+  marginBottom: 4,
+};
+
+const errorStyle = {
+  color: "red",
+  fontSize: 12,
+  marginTop: 4,
+};
 
 export default function Login() {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    mode: "onChange",
+    resolver: zodResolver(loginSchema),
+
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const navigate = useNavigate();
+
+  async function onSubmit(data) {
+    try {
+      const response = await loginUser(data);
+
+      setSuccessMessage(response.data.message || "Login Successful 🎉");
+
+      setErrorMessage("");
+
+      console.log(response.data);
+
+      // save token if exists
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+
+      reset();
+
+      navigate("/");
+    } catch (error) {
+      setSuccessMessage("");
+
+      setErrorMessage(
+        error.response?.data?.message || "Invalid email or password",
+      );
+
+      console.log(error);
+    }
+  }
+
   return (
     <div
       style={{
@@ -76,7 +100,8 @@ export default function Login() {
         fontFamily: "'Nunito', 'Poppins', 'Segoe UI', sans-serif",
       }}
     >
-      <div
+      <form
+        onSubmit={handleSubmit(onSubmit)}
         style={{
           width: "100%",
           maxWidth: 440,
@@ -86,6 +111,26 @@ export default function Login() {
           boxShadow: SHADOW,
         }}
       >
+        {/* Success Alert */}
+        {successMessage && (
+          <Alert
+            color="success"
+            title={successMessage}
+            variant="flat"
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {/* Error Alert */}
+        {errorMessage && (
+          <Alert
+            color="danger"
+            title={errorMessage}
+            variant="flat"
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
         {/* Brand */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div
@@ -104,6 +149,7 @@ export default function Login() {
           >
             💬
           </div>
+
           <h1
             style={{
               fontSize: 24,
@@ -123,7 +169,14 @@ export default function Login() {
               SocialApp
             </span>
           </h1>
-          <p style={{ color: "#C084A0", fontSize: 13, margin: "6px 0 0" }}>
+
+          <p
+            style={{
+              color: "#C084A0",
+              fontSize: 13,
+              margin: "6px 0 0",
+            }}
+          >
             Sign in to reconnect with your world 🌸
           </p>
         </div>
@@ -137,18 +190,56 @@ export default function Login() {
           }}
         />
 
-        <PinkInput
-          label="Email"
-          icon="✉️"
-          type="email"
-          placeholder="jane@example.com"
-        />
-        <PinkInput
-          label="Password"
-          icon="🔒"
-          type="password"
-          placeholder="Your password"
-        />
+        {/* Email */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Email</label>
+
+          <input
+            type="email"
+            placeholder="jane@example.com"
+            style={inputStyle}
+            {...register("email")}
+          />
+
+          <p style={errorStyle}>{errors.email?.message}</p>
+        </div>
+
+        {/* Password */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Password</label>
+
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Your password"
+              style={{
+                ...inputStyle,
+                paddingRight: 45,
+              }}
+              {...register("password")}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: "absolute",
+                right: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: "#C084A0",
+                fontSize: 18,
+              }}
+            >
+              {showPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+            </button>
+          </div>
+
+          <p style={errorStyle}>{errors.password?.message}</p>
+        </div>
 
         {/* Remember / Forgot */}
         <div
@@ -172,8 +263,9 @@ export default function Login() {
             <input type="checkbox" style={{ accentColor: "#FF3366" }} />
             Remember me
           </label>
-          <a
-            href="#"
+
+          <Link
+            to="/forgot-password"
             style={{
               fontSize: 12,
               fontWeight: 700,
@@ -182,12 +274,13 @@ export default function Login() {
             }}
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
 
-        {/* CTA */}
+        {/* Submit */}
         <button
-          type="button"
+          disabled={isSubmitting}
+          type="submit"
           style={{
             width: "100%",
             padding: 14,
@@ -200,9 +293,10 @@ export default function Login() {
             cursor: "pointer",
             boxShadow: "0 6px 20px rgba(255,51,102,.35)",
             letterSpacing: "0.03em",
+            opacity: isSubmitting ? 0.7 : 1,
           }}
         >
-          Sign In ✨
+          {isSubmitting ? "Signing In..." : "Sign In ✨"}
         </button>
 
         {/* OR */}
@@ -215,12 +309,21 @@ export default function Login() {
           }}
         >
           <div style={{ flex: 1, height: 1, background: "#FFE4EC" }} />
-          <span style={{ color: "#FFAEC9", fontSize: 12, fontWeight: 600 }}>
+
+          <span
+            style={{
+              color: "#FFAEC9",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
             or continue with
           </span>
+
           <div style={{ flex: 1, height: 1, background: "#FFE4EC" }} />
         </div>
 
+        {/* Social Buttons */}
         <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
           {["Google", "Apple", "Facebook"].map((name) => (
             <button
@@ -230,7 +333,7 @@ export default function Login() {
                 flex: 1,
                 padding: "10px 0",
                 background: "#FFF7F9",
-                border: BORDER,
+                border: "1.5px solid #FFAEC9",
                 borderRadius: 12,
                 cursor: "pointer",
                 fontSize: 13,
@@ -243,6 +346,7 @@ export default function Login() {
           ))}
         </div>
 
+        {/* Register Link */}
         <p
           style={{
             textAlign: "center",
@@ -263,7 +367,7 @@ export default function Login() {
             Sign Up →
           </Link>
         </p>
-      </div>
+      </form>
     </div>
   );
 }

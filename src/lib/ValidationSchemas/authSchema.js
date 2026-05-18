@@ -57,3 +57,15 @@ export const regSchema = z
     message: "Passwords do not match",
     path: ["rePassword"],
   });
+
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .nonempty("Email is Required")
+    .email("Please enter a valid email"),
+
+  password: z
+    .string()
+    .nonempty("Password is Required")
+    .min(8, "Password must be at least 8 characters"),
+});

@@ -3,6 +3,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { regSchema } from "../../../lib/ValidationSchemas/authSchema";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
 import { useState } from "react";
+import { registerUser } from "../../../services/authServices";
+import { Alert } from "@heroui/react";
+import { useNavigate } from "react-router";
+
 const GRAD = "linear-gradient(135deg, #FF3366 0%, #FF6B9D 100%)";
 const SHADOW = "0 8px 40px rgba(255,51,102,0.13)";
 
@@ -40,7 +44,7 @@ export default function Register() {
     handleSubmit,
     reset,
     watch,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm({
     mode: "onChange",
     resolver: zodResolver(regSchema),
@@ -58,12 +62,28 @@ export default function Register() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const password = watch("password");
+  const navigate = useNavigate();
+  async function onSubmit(data) {
+    try {
+      const response = await registerUser(data);
 
-  function onSubmit(data) {
-    console.log(data);
+      setSuccessMessage(response.data.message || "Registered Successfully 🎉");
 
-    reset();
+      setErrorMessage("");
+
+      console.log(response.data);
+      navigate("/login");
+      reset();
+    } catch (error) {
+      setSuccessMessage("");
+
+      setErrorMessage(error.response?.data?.message || "Something went wrong");
+
+      console.log(error);
+    }
   }
 
   return (
@@ -86,6 +106,25 @@ export default function Register() {
           boxShadow: SHADOW,
         }}
       >
+        {/* Success Alert */}
+        {successMessage && (
+          <Alert
+            color="success"
+            title={successMessage}
+            variant="flat"
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        {/* Error Alert */}
+        {errorMessage && (
+          <Alert
+            color="danger"
+            title={errorMessage}
+            variant="flat"
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {/* title and brand */}
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div
@@ -338,6 +377,7 @@ export default function Register() {
 
         {/* Submit */}
         <button
+          isLoading={isSubmitting}
           type="submit"
           style={{
             width: "100%",
