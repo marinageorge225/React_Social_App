@@ -1,5 +1,8 @@
 import { useForm } from "react-hook-form";
-
+import { zodResolver } from "@hookform/resolvers/zod";
+import { regSchema } from "../../../lib/ValidationSchemas/authSchema";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import { useState } from "react";
 const GRAD = "linear-gradient(135deg, #FF3366 0%, #FF6B9D 100%)";
 const SHADOW = "0 8px 40px rgba(255,51,102,0.13)";
 
@@ -40,6 +43,7 @@ export default function Register() {
     formState: { errors },
   } = useForm({
     mode: "onChange",
+    resolver: zodResolver(regSchema),
 
     defaultValues: {
       name: "",
@@ -52,7 +56,8 @@ export default function Register() {
     },
   });
 
-  // watch password
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRePassword, setShowRePassword] = useState(false);
   const password = watch("password");
 
   function onSubmit(data) {
@@ -81,6 +86,64 @@ export default function Register() {
           boxShadow: SHADOW,
         }}
       >
+        {/* title and brand */}
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 18,
+              background: GRAD,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              marginBottom: 12,
+              boxShadow: "0 6px 18px rgba(255,51,102,.3)",
+            }}
+          >
+            💬
+          </div>
+
+          <h1
+            style={{
+              fontSize: 24,
+              fontWeight: 800,
+              color: "#2D0A1A",
+              margin: 0,
+            }}
+          >
+            Join{" "}
+            <span
+              style={{
+                background: GRAD,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              SocialApp
+            </span>
+          </h1>
+
+          <p
+            style={{
+              color: "#C084A0",
+              fontSize: 13,
+              marginTop: 6,
+            }}
+          >
+            Create your account in seconds ✨
+          </p>
+
+          <div
+            style={{
+              height: 1,
+              background:
+                "linear-gradient(90deg,transparent,#FFAEC9,transparent)",
+              marginTop: 20,
+            }}
+          />
+        </div>
         {/* Name */}
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Full Name</label>
@@ -89,19 +152,20 @@ export default function Register() {
             type="text"
             placeholder="Enter your name"
             style={inputStyle}
-            {...register("name", {
-              required: "Please enter your Full Name",
+            {...register("name")}
+            // {...register("name", {
+            //   required: "Please enter your Full Name",
 
-              minLength: {
-                value: 3,
-                message: "Characters should be more than 3",
-              },
+            //   minLength: {
+            //     value: 3,
+            //     message: "Characters should be more than 3",
+            //   },
 
-              maxLength: {
-                value: 40,
-                message: "Characters should be less than 40",
-              },
-            })}
+            //   maxLength: {
+            //     value: 40,
+            //     message: "Characters should be less than 40",
+            //   },
+            // })}
           />
 
           <p style={errorStyle}>{errors.name?.message}</p>
@@ -115,25 +179,26 @@ export default function Register() {
             type="text"
             placeholder="Enter username"
             style={inputStyle}
-            {...register("username", {
-              required: "Username is required",
+            {...register("username")}
+            // {...register("username", {
+            //   required: "Username is required",
 
-              minLength: {
-                value: 5,
-                message: "Username should be at least 5 characters",
-              },
+            //   minLength: {
+            //     value: 5,
+            //     message: "Username should be at least 5 characters",
+            //   },
 
-              maxLength: {
-                value: 20,
-                message: "Username should be less than 20 characters",
-              },
+            //   maxLength: {
+            //     value: 20,
+            //     message: "Username should be less than 20 characters",
+            //   },
 
-              pattern: {
-                value: /^[A-Za-z0-9_]+$/,
-                message:
-                  "Username can contain letters, numbers and underscore only",
-              },
-            })}
+            //   pattern: {
+            //     value: /^[A-Za-z0-9_]+$/,
+            //     message:
+            //       "Username can contain letters, numbers and underscore only",
+            //   },
+            // })}
           />
 
           <p style={errorStyle}>{errors.username?.message}</p>
@@ -147,61 +212,92 @@ export default function Register() {
             type="email"
             placeholder="jane@example.com"
             style={inputStyle}
-            {...register("email", {
-              required: "Email is required",
+            {...register("email")}
+            // {...register("email", {
+            //   required: "Email is required",
 
-              pattern: {
-                value: /^[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/,
-                message: "Please enter a valid email",
-              },
-            })}
+            //   pattern: {
+            //     value: /^[a-zA-Z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/,
+            //     message: "Please enter a valid email",
+            //   },
+            // })}
           />
 
           <p style={errorStyle}>{errors.email?.message}</p>
         </div>
 
         {/* Password */}
+        {/* Password */}
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Password</label>
 
-          <input
-            type="password"
-            placeholder="Password"
-            style={inputStyle}
-            {...register("password", {
-              required: "Password is required",
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              style={{
+                ...inputStyle,
+                paddingRight: 45,
+              }}
+              {...register("password")}
+            />
 
-              minLength: {
-                value: 8,
-                message: "Password should be at least 8 characters",
-              },
-
-              pattern: {
-                value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/,
-                message:
-                  "Password must contain uppercase, lowercase, number and special character",
-              },
-            })}
-          />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: "absolute",
+                right: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: "#C084A0",
+                fontSize: 18,
+              }}
+            >
+              {showPassword ? <FaRegEyeSlash /> : <FaRegEye />}
+            </button>
+          </div>
 
           <p style={errorStyle}>{errors.password?.message}</p>
         </div>
 
         {/* RePassword */}
+        {/* RePassword */}
         <div style={{ marginBottom: 14 }}>
           <label style={labelStyle}>Confirm Password</label>
 
-          <input
-            type="password"
-            placeholder="Repeat password"
-            style={inputStyle}
-            {...register("rePassword", {
-              required: "Please confirm your password",
+          <div style={{ position: "relative" }}>
+            <input
+              type={showRePassword ? "text" : "password"}
+              placeholder="Repeat password"
+              style={{
+                ...inputStyle,
+                paddingRight: 45,
+              }}
+              {...register("rePassword")}
+            />
 
-              validate: (value) =>
-                value === password || "Passwords do not match",
-            })}
-          />
+            <button
+              type="button"
+              onClick={() => setShowRePassword(!showRePassword)}
+              style={{
+                position: "absolute",
+                right: 14,
+                top: "50%",
+                transform: "translateY(-50%)",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: "#C084A0",
+                fontSize: 18,
+              }}
+            >
+              {showRePassword ? <FaRegEyeSlash /> : <FaRegEye />}
+            </button>
+          </div>
 
           <p style={errorStyle}>{errors.rePassword?.message}</p>
         </div>
@@ -213,9 +309,10 @@ export default function Register() {
           <input
             type="date"
             style={inputStyle}
-            {...register("dateOfBirth", {
-              required: "Date of Birth is required",
-            })}
+            {...register("dateOfBirth")}
+            // {...register("dateOfBirth", {
+            //   required: "Date of Birth is required",
+            // })}
           />
 
           <p style={errorStyle}>{errors.dateOfBirth?.message}</p>
@@ -227,13 +324,13 @@ export default function Register() {
 
           <select
             style={inputStyle}
-            {...register("gender", {
-              required: "Gender is required",
-            })}
+            {...register("gender")}
+            // {...register("gender", {
+            //   required: "Gender is required",
+            // })}
           >
             <option value="male">Male</option>
             <option value="female">Female</option>
-            <option value="other">Other</option>
           </select>
 
           <p style={errorStyle}>{errors.gender?.message}</p>
