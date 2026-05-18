@@ -1,27 +1,50 @@
 import React from "react";
-import authImg1 from "../../assets/auth/mobile.jpg";
-import authImg2 from "../../assets/auth/mobile2.jpg";
-import authImg3 from "../../assets/auth/mobile3.jpg";
 import { Outlet } from "react-router";
 
 function AuthLayout() {
   return (
-    <>
-      <div className="container mx-auto h-screen my-10 ">
-        <div className="flex justify-center items-center">
-          <div className="w-1/3">
-            <img
-              src={authImg2}
-              alt="authentication Image "
-              className="w-full h-full object-cover rounded-3xl"
-            ></img>
-          </div>
-          <div className="w-2/3">
-            <Outlet />
-          </div>
-        </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {/* Decorative blobs */}
+      <div
+        style={{
+          position: "fixed",
+          top: -100,
+          right: -100,
+          width: 350,
+          height: 350,
+          borderRadius: "50%",
+          background: "radial-gradient(circle,#FF6B9D33,transparent 70%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+      <div
+        style={{
+          position: "fixed",
+          bottom: -80,
+          left: -80,
+          width: 280,
+          height: 280,
+          borderRadius: "50%",
+          background: "radial-gradient(circle,#FF336622,transparent 70%)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Full-width outlet — Register/Login fill this */}
+      <div style={{ width: "100%", position: "relative", zIndex: 1 }}>
+        <Outlet />
       </div>
-    </>
+    </div>
   );
 }
 
