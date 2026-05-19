@@ -71,7 +71,7 @@ export default function Login() {
 
       console.log(response.data);
 
-      // save token if exists
+      // save token if exists to local storage
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
       }
