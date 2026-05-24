@@ -1,22 +1,32 @@
-import React from "react";
-import { Navbar } from "@heroui/navbar";
+import React, { useContext } from "react";
 import {
+  Navbar,
   NavbarBrand,
   NavbarContent,
   NavbarItem,
-  DropdownItem,
-  DropdownTrigger,
   Dropdown,
+  DropdownTrigger,
   DropdownMenu,
+  DropdownItem,
   Avatar,
   Input,
   Badge,
-} from "@heroui/react";
+} from "@nextui-org/react";
 import imgLogo from "../../assets/auth/logo1.png";
 import { LuMessageSquareHeart } from "react-icons/lu";
 import { IoMdNotificationsOutline } from "react-icons/io";
+import { useNavigate } from "react-router";
+import { AuthContext } from "../../context/AuthContext";
 
 const NavbarComponent = () => {
+  const navigate = useNavigate();
+  const { token, setToken } = useContext(AuthContext);
+  function handleLogout() {
+    localStorage.removeItem("token");
+    setToken(null);
+    navigate("/login");
+  }
+
   return (
     <Navbar
       maxWidth="2xl"
@@ -200,6 +210,7 @@ const NavbarComponent = () => {
                 fontSize: 14,
                 borderTop: "1px solid #FFE4EC",
               }}
+              onClick={() => handleLogout()}
             >
               🚪 Log Out
             </DropdownItem>

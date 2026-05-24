@@ -1,10 +1,12 @@
-import React, { useEffect } from "react";
+import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router";
+import { AuthContext } from "../../context/AuthContext";
 
-function AuthProtectedRoutes({ childer }) {
-  const userToken = localStorage.getItem("token");
+function AuthProtectedRoutes({ children }) {
+  // const userToken = localStorage.getItem("token");
   const navigate = useNavigate();
-
+  let { token } = useContext(AuthContext);
+  const userToken = token;
   useEffect(() => {
     if (userToken) {
       navigate("/");

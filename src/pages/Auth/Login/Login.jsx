@@ -2,10 +2,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "../../../lib/ValidationSchemas/authSchema";
 import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { loginUser } from "../../../services/authServices";
 import { Alert } from "@heroui/react";
 import { Link, useNavigate } from "react-router";
+import { AuthContext } from "../../../context/AuthContext";
 
 const GRAD = "linear-gradient(135deg, #FF3366 0%, #FF6B9D 100%)";
 const SHADOW = "0 8px 40px rgba(255,51,102,0.13)";
@@ -58,35 +59,27 @@ export default function Login() {
 
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
+  const { token, setToken } = useContext(AuthContext);
   const navigate = useNavigate();
 
   async function onSubmit(data) {
     try {
       const response = await loginUser(data);
 
-      setSuccessMessage(response.data.message || "Login Successful 🎉");
-
-      setErrorMessage("");
-
-      console.log(response.data);
-
-      // save token if exists to local storage
-      if (response.data.token) {
-        localStorage.setItem("token", response.data.token);
+      if (response.data.data.token) {
+        localStorage.setItem("token", response.data.data.token);
+        setToken(response.data.data.token);
       }
 
+      setSuccessMessage(response.data.message || "Login Successful 🎉");
+      setErrorMessage("");
       reset();
-
       navigate("/");
     } catch (error) {
       setSuccessMessage("");
-
       setErrorMessage(
         error.response?.data?.message || "Invalid email or password",
       );
-
-      console.log(error);
     }
   }
 
