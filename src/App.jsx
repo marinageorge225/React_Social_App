@@ -9,6 +9,7 @@ import Login from "./pages/Auth/Login/Login";
 import Register from "./pages/Auth/Register/Register";
 import AppProtectedRoutes from "./components/ProtectedRoutes/AppProtectedRoutes";
 import AuthProtectedRoutes from "./components/ProtectedRoutes/AuthProtectedRoutes";
+import PostDetails from "./pages/PostDetails/PostDetails";
 
 function App() {
   const routes = createBrowserRouter([
@@ -29,6 +30,14 @@ function App() {
           element: (
             <AppProtectedRoutes>
               <UserPosts />{" "}
+            </AppProtectedRoutes>
+          ),
+        },
+        {
+          path: "post/:id",
+          element: (
+            <AppProtectedRoutes>
+              <PostDetails />{" "}
             </AppProtectedRoutes>
           ),
         },

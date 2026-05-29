@@ -11,3 +11,13 @@ export async function getAllPosts() {
   });
   return data;
 }
+
+export async function getPostById(id) {
+  let data = await axios.get(`${baseurl}/posts/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  return data;
+}

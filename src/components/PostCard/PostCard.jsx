@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router";
 
 const PINK = "#e91e8c";
 const PINK_SOFT = "#fdf0f6";
@@ -198,20 +199,22 @@ export default function PostCard({ post }) {
 
       {/* Image */}
 
-      {post.image ? (
-        <img
-          src={post.image}
-          alt="post-image"
-          style={{
-            width: "100%",
-            maxHeight: 340,
-            objectFit: "cover",
-            display: "block",
-          }}
-        />
-      ) : (
-        handlePostWithoutImage(post.image, post.body)
-      )}
+      <Link to={`/post/${post.id}`}>
+        {post.image ? (
+          <img
+            src={post.image}
+            alt="post-image"
+            style={{
+              width: "100%",
+              maxHeight: 340,
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : (
+          handlePostWithoutImage(post.image, post.body)
+        )}
+      </Link>
 
       {/* Stats row */}
       <div
