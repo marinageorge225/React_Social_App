@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { Link } from "react-router";
+import { getAllComments, createComment } from "../../services/commentsServises";
 
-const PINK = "#e91e8c";
-const PINK_SOFT = "#fdf0f6";
-const PINK_BORDER = "#f5c6dd";
-const PINK_MID = "#e991b8";
-const PINK_TEXT = "#5a1a35";
-const CARD_BORDER = "1px solid #f2d9e6";
+const P = "#e91e8c";
+const PS = "#fdf0f6";
+const PB = "#f5c6dd";
+const PT = "#5a1a35";
+const CARD = "1px solid #f2d9e6";
+const PAGE_SIZE = 5;
 
 function timeAgo(iso) {
   const diff = (Date.now() - new Date(iso)) / 1000;
@@ -16,45 +17,145 @@ function timeAgo(iso) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-const PRIVACY_META = {
-  public: { icon: "🌍", label: "Public" },
-  friends: { icon: "👥", label: "Friends" },
-  private: { icon: "🔒", label: "Only me" },
+const PRIVACY = {
+  public: "🌍 Public",
+  friends: "👥 Friends",
+  private: "🔒 Only me",
 };
+
+function Avatar({ src, id, size = 42 }) {
+  return (
+    <img
+      src={src}
+      onError={(e) => (e.target.src = `https://i.pravatar.cc/150?u=${id}`)}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        objectFit: "cover",
+        border: `2px solid #e991b8`,
+      }}
+    />
+  );
+}
+
+function Comment({ c }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 8,
+        marginBottom: 10,
+        alignItems: "flex-start",
+      }}
+    >
+      <Avatar src={c.commentCreator?.photo} id={c._id} size={30} />
+      <div
+        style={{
+          background: PS,
+          border: `1px solid ${PB}`,
+          borderRadius: "0 12px 12px 12px",
+          padding: "7px 11px",
+          fontSize: 12,
+          flex: 1,
+        }}
+      >
+        <strong style={{ color: PT }}>
+          {c.commentCreator?.name ?? "Unknown"}
+        </strong>
+        <span style={{ color: "#c291aa", marginLeft: 6, fontSize: 10 }}>
+          {timeAgo(c.createdAt)}
+        </span>
+        <p style={{ margin: "3px 0 0", color: "#3d1a28" }}>{c.content}</p>
+      </div>
+    </div>
+  );
+}
 
 export default function PostCard({ post }) {
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(post?.likesCount ?? 0);
-  const [showComment, setShowComment] = useState(false);
+  const [open, setOpen] = useState(false);
   const [comment, setComment] = useState("");
-  console.log(post);
+  const [comments, setComments] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
   if (!post) return null;
 
-  const privacy = PRIVACY_META[post.privacy] ?? PRIVACY_META.public;
-
-  function handleLike() {
-    setLiked((p) => !p);
-    setLikes((p) => (liked ? p - 1 : p + 1));
-  }
-  function handlePostWithoutImage(image, post) {
-    if (!image) {
-      return (
-        <div className="w-full h-50 bg-blue-500 text-white flex items-center justify-center">
-          <p className="text-2xl capitalize">{post}</p>
-        </div>
-      );
+  async function loadComments(p) {
+    setLoading(true);
+    try {
+      const { data } = await getAllComments(post._id ?? post.id, p);
+      const items = data?.data?.comments ?? data?.comments ?? [];
+      const total = data?.data?.total ?? data?.total ?? 0;
+      setComments((prev) => (p === 1 ? items : [...prev, ...items]));
+      setPage(p);
+      setHasMore(p * PAGE_SIZE < total);
+      setLoaded(true);
+    } finally {
+      setLoading(false);
     }
   }
+
+  async function handleCommentSubmit() {
+    if (!comment.trim()) return;
+    try {
+      await createComment(post._id, {
+        content: comment,
+      });
+      setComment("");
+      loadComments(1);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  function toggleComments() {
+    setOpen((v) => !v);
+    if (!loaded) loadComments(1);
+  }
+
+  const btn = (label, icon, action, active) => (
+    <button
+      key={label}
+      onClick={action}
+      style={{
+        flex: 1,
+        padding: "9px 4px",
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        borderRadius: 8,
+        fontSize: 13,
+        fontWeight: active ? 700 : 600,
+        color: active ? P : "#c291aa",
+        fontFamily: "inherit",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = PS;
+        e.currentTarget.style.color = P;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "none";
+        e.currentTarget.style.color = active ? P : "#c291aa";
+      }}
+    >
+      {icon} {label}
+    </button>
+  );
 
   return (
     <div
       style={{
         background: "#fff",
         borderRadius: 14,
-        border: CARD_BORDER,
+        border: CARD,
         marginBottom: 14,
         overflow: "hidden",
-        fontFamily: "-apple-system, 'Segoe UI', sans-serif",
+        fontFamily: "-apple-system,'Segoe UI',sans-serif",
       }}
     >
       {/* Header */}
@@ -66,23 +167,9 @@ export default function PostCard({ post }) {
           padding: "14px 14px 10px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <img
-              src={post.user?.photo}
-              alt={post.user?.name || "User"}
-              onError={(e) => {
-                e.target.src = `https://i.pravatar.cc/150?u=${post._id}`;
-              }}
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: `2px solid ${PINK_MID}`,
-                display: "block",
-              }}
-            />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative" }}>
+            <Avatar src={post.user?.photo} id={post._id} />
             <span
               style={{
                 position: "absolute",
@@ -96,48 +183,24 @@ export default function PostCard({ post }) {
               }}
             />
           </div>
-          <div style={{ marginLeft: 10 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: PINK_TEXT,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
-              {post.user?.name || "Unknown"}
-              {post.bookmarked && (
-                <span style={{ fontSize: 11, color: PINK }}>🔖</span>
-              )}
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: PT }}>
+              {post.user?.name ?? "Unknown"}
             </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "#c291aa",
-                marginTop: 2,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
+            <div style={{ fontSize: 11, color: "#c291aa", marginTop: 2 }}>
               {timeAgo(post.createdAt)}
               <span
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 3,
+                  marginLeft: 6,
                   fontSize: 10,
-                  color: PINK_MID,
-                  background: PINK_SOFT,
-                  border: `1px solid ${PINK_BORDER}`,
+                  color: "#e991b8",
+                  background: PS,
+                  border: `1px solid ${PB}`,
                   borderRadius: 999,
                   padding: "1px 7px",
-                  marginLeft: 4,
                 }}
               >
-                {privacy.icon} {privacy.label}
+                {PRIVACY[post.privacy] ?? PRIVACY.public}
               </span>
             </div>
           </div>
@@ -149,24 +212,13 @@ export default function PostCard({ post }) {
             cursor: "pointer",
             color: "#c291aa",
             fontSize: 20,
-            padding: "4px 6px",
-            borderRadius: 8,
-            lineHeight: 1,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = PINK_SOFT;
-            e.currentTarget.style.color = PINK;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "none";
-            e.currentTarget.style.color = "#c291aa";
           }}
         >
           ···
         </button>
       </div>
 
-      {/* Body text */}
+      {/* Body */}
       {post.body && (
         <div
           style={{
@@ -180,17 +232,17 @@ export default function PostCard({ post }) {
         </div>
       )}
 
-      {/* Shared post preview */}
+      {/* Shared post */}
       {post.isShare && post.sharedPost && (
         <div
           style={{
             margin: "0 14px 12px",
-            border: `1px solid ${PINK_BORDER}`,
+            border: `1px solid ${PB}`,
             borderRadius: 10,
             padding: 10,
-            background: PINK_SOFT,
+            background: PS,
             fontSize: 13,
-            color: PINK_TEXT,
+            color: PT,
           }}
         >
           <strong>{post.sharedPost.user?.name}</strong>: {post.sharedPost.body}
@@ -198,12 +250,11 @@ export default function PostCard({ post }) {
       )}
 
       {/* Image */}
-
       <Link to={`/post/${post.id}`}>
         {post.image ? (
           <img
             src={post.image}
-            alt="post-image"
+            alt="post"
             style={{
               width: "100%",
               maxHeight: 340,
@@ -212,16 +263,25 @@ export default function PostCard({ post }) {
             }}
           />
         ) : (
-          handlePostWithoutImage(post.image, post.body)
+          <div
+            style={{
+              background: PS,
+              padding: 16,
+              textAlign: "center",
+              color: PT,
+              fontSize: 15,
+            }}
+          >
+            {post.body}
+          </div>
         )}
       </Link>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
           padding: "7px 14px",
           fontSize: 12,
           color: "#c291aa",
@@ -229,166 +289,134 @@ export default function PostCard({ post }) {
           borderBottom: "1px solid #f9eaf2",
         }}
       >
-        <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
-              background: PINK,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 10,
-            }}
-          >
-            ♥
-          </span>
-          {likes} {likes === 1 ? "like" : "likes"}
+        <span>
+          ♥ {likes} {likes === 1 ? "like" : "likes"}
         </span>
-        <span style={{ display: "flex", gap: 10 }}>
-          <span>
-            {post.commentsCount}{" "}
-            {post.commentsCount === 1 ? "comment" : "comments"}
-          </span>
-          <span>
-            {post.sharesCount} {post.sharesCount === 1 ? "share" : "shares"}
-          </span>
+        <span>
+          {post.commentsCount} comments · {post.sharesCount} shares
         </span>
       </div>
 
-      {/* Action buttons */}
+      {/* Actions */}
       <div style={{ display: "flex", padding: "2px 8px" }}>
-        {[
-          {
-            label: liked ? "Liked" : "Like",
-            icon: "♥",
-            action: handleLike,
-            active: liked,
+        {btn(
+          liked ? "Liked" : "Like",
+          "♥",
+          () => {
+            setLiked((v) => !v);
+            setLikes((v) => (liked ? v - 1 : v + 1));
           },
-          {
-            label: "Comment",
-            icon: "💬",
-            action: () => setShowComment((p) => !p),
-            active: showComment,
-          },
-          { label: "Share", icon: "↗", action: () => {}, active: false },
-        ].map(({ label, icon, action, active }) => (
-          <button
-            key={label}
-            onClick={action}
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "9px 4px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: active ? 700 : 600,
-              color: active ? PINK : "#c291aa",
-              fontFamily: "inherit",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = PINK_SOFT;
-              e.currentTarget.style.color = PINK;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "none";
-              e.currentTarget.style.color = active ? PINK : "#c291aa";
-            }}
-          >
-            {icon} {label}
-          </button>
-        ))}
+          liked,
+        )}
+        {btn("Comment", "💬", toggleComments, open)}
+        {btn("Share", "↗", () => {}, false)}
       </div>
 
-      {/* Comment input */}
-      {showComment && (
+      {/* Top comment (collapsed) */}
+      {!open && post.topComment && (
         <div
           style={{
-            padding: "10px 14px 13px",
-            display: "flex",
-            gap: 9,
-            alignItems: "center",
+            padding: "8px 14px 12px",
+            fontSize: 12,
+            color: "#c291aa",
             borderTop: "1px solid #f9eaf2",
           }}
         >
-          <img
-            src="https://i.pravatar.cc/150?u=me"
-            alt="me"
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: `2px solid ${PINK_MID}`,
-              flexShrink: 0,
-            }}
-          />
-          <input
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Write a comment…"
-            style={{
-              flex: 1,
-              padding: "8px 13px",
-              border: `1.5px solid ${PINK_BORDER}`,
-              borderRadius: 20,
-              background: PINK_SOFT,
-              outline: "none",
-              fontSize: 13,
-              color: "#3d1a28",
-              fontFamily: "inherit",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = PINK;
-              e.target.style.background = "#fff";
-              e.target.style.boxShadow = "0 0 0 3px rgba(233,30,140,.08)";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = PINK_BORDER;
-              e.target.style.background = PINK_SOFT;
-              e.target.style.boxShadow = "none";
-            }}
-          />
-          <button
-            style={{
-              background: PINK,
-              border: "none",
-              borderRadius: 999,
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 12,
-              padding: "8px 14px",
-              cursor: "pointer",
-              flexShrink: 0,
-              fontFamily: "inherit",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#c2185b")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = PINK)}
-          >
-            Send
-          </button>
-        </div>
-      )}
-
-      {showComment && post.topComment && (
-        <div
-          style={{
-            padding: "0 14px 12px",
-            fontSize: 12,
-            color: "#c291aa",
-          }}
-        >
           ↳{" "}
-          <strong style={{ color: PINK_TEXT }}>
+          <strong style={{ color: PT }}>
             {post.topComment.commentCreator?.name}
           </strong>
           : {post.topComment.content}
+        </div>
+      )}
+
+      {/* Comments section (expanded) */}
+      {open && (
+        <div style={{ borderTop: "1px solid #f9eaf2", padding: "10px 14px" }}>
+          {/* Input */}
+          <div
+            style={{
+              display: "flex",
+              gap: 9,
+              alignItems: "center",
+              marginBottom: 12,
+            }}
+          >
+            <Avatar src="https://i.pravatar.cc/150?u=me" id="me" size={32} />
+            <input
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Write a comment…"
+              style={{
+                flex: 1,
+                padding: "8px 13px",
+                border: `1.5px solid ${PB}`,
+                borderRadius: 20,
+                background: PS,
+                outline: "none",
+                fontSize: 13,
+                fontFamily: "inherit",
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = P;
+                e.target.style.background = "#fff";
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = PB;
+                e.target.style.background = PS;
+              }}
+            />
+            <button
+              onClick={handleCommentSubmit}
+              disabled={!comment.trim()}
+              style={{
+                background: P,
+                border: "none",
+                borderRadius: 999,
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 12,
+                padding: "8px 14px",
+                cursor: "pointer",
+              }}
+            >
+              Send
+            </button>
+          </div>
+
+          {/* List */}
+          {loading && comments.length === 0 ? (
+            <p style={{ fontSize: 12, color: "#c291aa" }}>Loading…</p>
+          ) : (
+            comments.map((c) => <Comment key={c._id ?? c.id} c={c} />)
+          )}
+          {!loading && comments.length === 0 && loaded && (
+            <p style={{ fontSize: 12, color: "#c291aa" }}>
+              No comments yet. Be the first!
+            </p>
+          )}
+
+          {/* View more */}
+          {hasMore && (
+            <button
+              onClick={() => loadComments(page + 1)}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: 8,
+                background: "none",
+                border: `1px solid ${PB}`,
+                borderRadius: 8,
+                color: P,
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {loading ? "Loading…" : "View more comments"}
+            </button>
+          )}
         </div>
       )}
     </div>
