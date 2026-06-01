@@ -4,14 +4,15 @@ import SideBar from "../../components/SideBar/SideBar";
 import FriendReq from "../../components/FriendReq/FriendReq";
 import { getAllPosts } from "../../services/postServices";
 import PostSkeleton from "../../components/Skeletons/PostSkeleton";
+import CreatePost from "../../components/CreatePost/CreatePost";
 
 export default function NewsFeed() {
   const [posts, setPosts] = useState([]);
+  async function fetchAllPosts() {
+    const response = await getAllPosts();
+    setPosts(response.data.data.posts);
+  }
   useEffect(() => {
-    async function fetchAllPosts() {
-      const response = await getAllPosts();
-      setPosts(response.data.data.posts);
-    }
     fetchAllPosts();
   }, []);
   return (
@@ -39,7 +40,9 @@ export default function NewsFeed() {
         </aside>
 
         {/* Center feed */}
+
         <main style={{ minWidth: 0 }}>
+          <CreatePost fetchAllPosts={fetchAllPosts} />
           {posts.length > 0 ? (
             <>
               {posts.map((post) => (

@@ -24,7 +24,6 @@ const PINK_BORDER = "#f5c6dd";
 const PINK_MID = "#e991b8";
 const PINK_TEXT = "#5a1a35";
 
-/* ── Round icon button ─────────────────────────────────────────────────────── */
 function ActionBtn({ children, badge, label }) {
   const [hovered, setHovered] = useState(false);
   return (
@@ -90,8 +89,7 @@ const NavbarComponent = () => {
 
   return (
     <div>
-      {/* Solid top accent */}
-      <div style={{ height: 2, background: PINK }} />
+      <div style={{ height: 5 }} />
 
       <Navbar
         maxWidth="2xl"
@@ -104,7 +102,6 @@ const NavbarComponent = () => {
           paddingRight: "1.25rem",
         }}
       >
-        {/* Brand */}
         <NavbarBrand style={{ gap: 9, minWidth: 160 }}>
           <div
             style={{
@@ -143,6 +140,7 @@ const NavbarComponent = () => {
                 fontWeight: 800,
                 color: "#c2185b",
                 letterSpacing: "-0.3px",
+                marginBottom: 5,
               }}
             >
               SocialApp
