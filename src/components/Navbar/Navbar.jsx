@@ -10,6 +10,7 @@ import {
   DropdownItem,
   Avatar,
   Input,
+  Skeleton,
 } from "@nextui-org/react";
 import imgLogo from "../../assets/auth/logo1.png";
 import { LuMessageSquareHeart } from "react-icons/lu";
@@ -79,7 +80,7 @@ function ActionBtn({ children, badge, label }) {
 
 const NavbarComponent = () => {
   const navigate = useNavigate();
-  const { token, setToken } = useContext(AuthContext);
+  const { token, setToken, profileData } = useContext(AuthContext);
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -238,15 +239,24 @@ const NavbarComponent = () => {
                       e.currentTarget.style.background = PINK_SOFT;
                     }}
                   >
-                    <Avatar
-                      size="sm"
-                      src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
-                      style={{
-                        width: 30,
-                        height: 30,
-                        border: `2px solid ${PINK_MID}`,
-                      }}
-                    />
+                    {profileData?.photo ? (
+                      <Avatar
+                        size="sm"
+                        src={
+                          profileData
+                            ? profileData.photo
+                            : "https://i.pravatar.cc/150?u=a042581f4e29026704d"
+                        }
+                        style={{
+                          width: 30,
+                          height: 30,
+                          border: `2px solid ${PINK_MID}`,
+                        }}
+                      />
+                    ) : (
+                      <Skeleton className="rounded-lg"></Skeleton>
+                    )}
+
                     <div style={{ lineHeight: 1.25 }}>
                       <div
                         style={{
@@ -255,7 +265,7 @@ const NavbarComponent = () => {
                           color: PINK_TEXT,
                         }}
                       >
-                        Jason H.
+                        {profileData?.name}
                       </div>
                       <div
                         style={{
@@ -300,7 +310,11 @@ const NavbarComponent = () => {
                     >
                       <Avatar
                         size="sm"
-                        src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
+                        src={
+                          profileData
+                            ? profileData.photo
+                            : "https://i.pravatar.cc/150?u=a042581f4e29026704d"
+                        }
                         style={{ border: `2px solid ${PINK_MID}` }}
                       />
                       <div>
@@ -311,10 +325,10 @@ const NavbarComponent = () => {
                             color: PINK_TEXT,
                           }}
                         >
-                          Jason Hughes
+                          {profileData?.name}
                         </div>
                         <div style={{ fontSize: 11, color: "#c291aa" }}>
-                          zoey@example.com
+                          {profileData?.email}
                         </div>
                       </div>
                     </div>

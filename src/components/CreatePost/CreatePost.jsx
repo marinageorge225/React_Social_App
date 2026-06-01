@@ -1,9 +1,13 @@
 import { Card, Input, useDisclosure } from "@heroui/react";
-import React from "react";
+import React, { useContext } from "react";
 import FormModal from "./FormModal";
+import { AuthContext } from "../../context/AuthContext";
+import { Skeleton } from "@nextui-org/react";
 
 function CreatePost({ fetchAllPosts }) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const { token, setToken, profileData } = useContext(AuthContext);
+
   const DEFAULT_AVATAR =
     "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   return (
@@ -11,11 +15,16 @@ function CreatePost({ fetchAllPosts }) {
       <Card className="mb-4 p-4 bg-white rounded-lg shadow-sm">
         <h3 className="text-pink-600 text-xl mb-4 font-serif">Create Post</h3>
         <div className="flex items-center justify-content gap-5">
-          <img
-            src={DEFAULT_AVATAR}
-            alt="Default Avatar"
-            className="w-15 h-15 rounded-full shrink-0"
-          />
+          {profileData?.photo ? (
+            <img
+              src={profileData?.photo || DEFAULT_AVATAR}
+              alt="Default Avatar"
+              className="w-15 h-15 rounded-full shrink-0"
+            />
+          ) : (
+            <Skeleton className="rounded-lg"></Skeleton>
+          )}
+
           <Input
             onClick={onOpen}
             isReadOnly
