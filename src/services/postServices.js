@@ -37,3 +37,18 @@ export async function createPost(postData) {
 
   return data;
 }
+
+export async function getUserPosts() {
+  const token = localStorage.getItem("token");
+
+  const data = await axios.get(
+    `${baseurl}/posts/feed?only=following&limit=10`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  return data;
+}

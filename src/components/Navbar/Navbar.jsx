@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Navbar,
   NavbarBrand,
@@ -12,12 +12,23 @@ import {
   Input,
   Skeleton,
 } from "@nextui-org/react";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  Spinner,
+} from "@heroui/react";
 import imgLogo from "../../assets/auth/logo1.png";
 import { LuMessageSquareHeart } from "react-icons/lu";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import { IoChevronDownOutline } from "react-icons/io5";
 import { useNavigate } from "react-router";
 import { AuthContext } from "../../context/AuthContext";
+import {
+  getNotificationsContent,
+  getUnreadNotifications,
+  markAllNotificationsRead,
+} from "../../services/userServices";
 
 const PINK = "#e91e8c";
 const PINK_SOFT = "#fdf0f6";
@@ -81,12 +92,48 @@ function ActionBtn({ children, badge, label }) {
 const NavbarComponent = () => {
   const navigate = useNavigate();
   const { token, setToken, profileData } = useContext(AuthContext);
+  const [unreadNotification, setUnreadNotification] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
 
   function handleLogout() {
     localStorage.removeItem("token");
     setToken(null);
     navigate("/login");
   }
+  async function fetchNotifications() {
+    try {
+      setLoadingNotifications(true);
+
+      const response = await getNotificationsContent();
+
+      setNotifications(response.data.data.notifications);
+
+      await markAllNotificationsRead();
+
+      setUnreadNotification(0);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }
+  useEffect(() => {
+    const fetchUnreadNotifications = async () => {
+      try {
+        const response = await getUnreadNotifications();
+        setUnreadNotification(response.data.data.unreadCount);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchUnreadNotifications();
+
+    const interval = setInterval(fetchUnreadNotifications, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div>
@@ -197,13 +244,65 @@ const NavbarComponent = () => {
         <NavbarContent as="div" justify="end">
           <NavbarItem>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <ActionBtn badge="5" label="Messages">
-                <LuMessageSquareHeart />
-              </ActionBtn>
+              <Popover placement="bottom-end">
+                <PopoverTrigger>
+                  <div onClick={fetchNotifications}>
+                    <ActionBtn
+                      badge={unreadNotification > 0 ? unreadNotification : null}
+                      label="Notifications"
+                    >
+                      <IoMdNotificationsOutline />
+                    </ActionBtn>
+                  </div>
+                </PopoverTrigger>
 
-              <ActionBtn badge="3" label="Notifications">
-                <IoMdNotificationsOutline />
-              </ActionBtn>
+                <PopoverContent className="w-95 p-0">
+                  <div className="w-full">
+                    <div className="p-3 border-b font-semibold">
+                      Notifications
+                    </div>
+
+                    {loadingNotifications ? (
+                      <div className="flex justify-center p-4">
+                        <Spinner />
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        No notifications
+                      </div>
+                    ) : (
+                      <div className="max-h-112.5 overflow-y-auto">
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification._id}
+                            className="flex items-center gap-3 p-3 border-b hover:bg-gray-50"
+                          >
+                            <Avatar src={notification.actor.photo} size="sm" />
+
+                            <div className="flex-1">
+                              <p className="text-sm">
+                                <strong>{notification.actor.name}</strong>{" "}
+                                {notification.type === "like_post" &&
+                                  "liked your post"}
+                                {notification.type === "comment_post" &&
+                                  "commented on your post"}
+                                {notification.type === "share_post" &&
+                                  "shared your post"}
+                              </p>
+
+                              <p className="text-xs text-gray-500">
+                                {new Date(
+                                  notification.createdAt,
+                                ).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               <div
                 style={{
@@ -336,6 +435,7 @@ const NavbarComponent = () => {
 
                   <DropdownItem
                     key="MyProfile"
+                    onPress={() => navigate("/profile")}
                     style={{
                       padding: "11px 14px",
                       fontSize: 13,
