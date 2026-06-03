@@ -72,23 +72,6 @@ export default function FormModal({ isOpen, onOpenChange, fetchAllPosts }) {
                 Create Post
               </ModalHeader>
               <ModalBody>
-                {/* <Input
-                  endContent={
-                    <MailIcon className="text-2xl text-default-400 pointer-events-none shrink-0" />
-                  }
-                  label="Email"
-                  placeholder="Enter your email"
-                  variant="bordered"
-                />
-                <Input
-                  endContent={
-                    <LockIcon className="text-2xl text-default-400 pointer-events-none shrink-0" />
-                  }
-                  label="Password"
-                  placeholder="Enter your password"
-                  type="password"
-                  variant="bordered"
-                /> */}
                 <Textarea
                   minRows={50}
                   className="max-w-md"

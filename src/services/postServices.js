@@ -52,3 +52,26 @@ export async function getUserPosts() {
 
   return data;
 }
+export async function deletePost(postId) {
+  const token = localStorage.getItem("token");
+
+  const data = await axios.delete(`${baseurl}/posts/${postId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return data;
+}
+export async function UpdatePost(postId, formData) {
+  const token = localStorage.getItem("token");
+
+  const data = await axios.put(`${baseurl}/posts/${postId}`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return data;
+}

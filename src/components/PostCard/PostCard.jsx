@@ -1,6 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Link } from "react-router";
 import { getAllComments, createComment } from "../../services/commentsServises";
+import { deletePost, UpdatePost } from "../../services/postServices";
+import { AuthContext } from "../../context/AuthContext";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Textarea,
+  addToast,
+} from "@heroui/react";
 
 const P = "#e91e8c";
 const PS = "#fdf0f6";
@@ -82,19 +94,37 @@ export default function PostCard({ post }) {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  // Use post._id with fallback to post.id for API compatibility
+  const postId = post?._id ?? post?.id;
+  const [postData, setPostData] = useState(post);
+  const [updatedText, setUpdatedText] = useState(post?.body ?? "");
+  const { profileData } = useContext(AuthContext);
+  const [updatedImage, setUpdatedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(post?.image || "");
+  const isOwner =
+    profileData?._id === post?.user?._id || profileData?._id === post?.user?.id;
 
-  if (!post) return null;
+  // FIX: Guard after all hooks — avoids React "fewer hooks than expected" error
+  if (!post || isDeleted) return null;
 
   async function loadComments(p) {
     setLoading(true);
     try {
-      const { data } = await getAllComments(post._id ?? post.id, p);
+      const { data } = await getAllComments(postId, p);
       const items = data?.data?.comments ?? data?.comments ?? [];
       const total = data?.data?.total ?? data?.total ?? 0;
       setComments((prev) => (p === 1 ? items : [...prev, ...items]));
       setPage(p);
       setHasMore(p * PAGE_SIZE < total);
       setLoaded(true);
+    } catch (error) {
+      console.error("Failed to load comments:", error);
     } finally {
       setLoading(false);
     }
@@ -103,19 +133,83 @@ export default function PostCard({ post }) {
   async function handleCommentSubmit() {
     if (!comment.trim()) return;
     try {
-      await createComment(post._id, {
-        content: comment,
-      });
+      await createComment(postId, { content: comment });
       setComment("");
       loadComments(1);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to submit comment:", error);
     }
   }
 
   function toggleComments() {
     setOpen((v) => !v);
     if (!loaded) loadComments(1);
+  }
+
+  // FIX: Use consistent postId; added loading state to prevent double-clicks
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      await deletePost(postId);
+      addToast({
+        title: "Post deleted",
+        description: "Your post was removed successfully.",
+        color: "success",
+      });
+      setIsDeleted(true);
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      addToast({
+        title: "Delete failed",
+        description: error?.response?.data?.message ?? "Please try again.",
+        color: "danger",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  // FIX: Use consistent postId; added loading state and toast feedback
+  async function handleUpdate(onClose) {
+    if (!updatedText.trim()) return;
+
+    setIsUpdating(true);
+
+    try {
+      const formData = new FormData();
+
+      formData.append("body", updatedText);
+
+      if (updatedImage) {
+        formData.append("image", updatedImage);
+      }
+
+      const { data } = await UpdatePost(postId, formData);
+
+      setPostData((prev) => ({
+        ...prev,
+        body: updatedText,
+        image: imagePreview || prev.image,
+      }));
+
+      addToast({
+        title: "Post updated",
+        description: "Your changes were saved.",
+        color: "success",
+      });
+
+      onClose();
+    } catch (error) {
+      console.error("Failed to update post:", error);
+
+      addToast({
+        title: "Update failed",
+        description: error?.response?.data?.message ?? "Please try again.",
+        color: "danger",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   }
 
   const btn = (label, icon, action, active) => (
@@ -169,7 +263,7 @@ export default function PostCard({ post }) {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ position: "relative" }}>
-            <Avatar src={post.user?.photo} id={post._id} />
+            <Avatar src={post.user?.photo} id={postId} />
             <span
               style={{
                 position: "absolute",
@@ -205,21 +299,112 @@ export default function PostCard({ post }) {
             </div>
           </div>
         </div>
-        <button
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            color: "#c291aa",
-            fontSize: 20,
-          }}
-        >
-          ···
-        </button>
+
+        {/* Owner menu */}
+        {isOwner && (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#c291aa",
+                fontSize: 20,
+                lineHeight: 1,
+                padding: "4px 8px",
+              }}
+            >
+              ⋮
+            </button>
+
+            {/* FIX: Backdrop to close menu on outside click */}
+            {showMenu && (
+              <>
+                <div
+                  onClick={() => setShowMenu(false)}
+                  style={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 998,
+                  }}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: 34,
+                    background: "#fff",
+                    border: "1px solid #eee",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    boxShadow: "0 4px 16px rgba(0,0,0,.12)",
+                    zIndex: 999,
+                    minWidth: 130,
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      setUpdatedText(postData.body ?? "");
+                      setUpdatedImage(null);
+                      setImagePreview(postData.image || "");
+                      setShowUpdateModal(true);
+                      setShowMenu(false);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 16px",
+                      border: "none",
+                      borderBottom: "1px solid #f3f3f3",
+                      background: "white",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontSize: 13,
+                      color: PT,
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = PS)
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "white")
+                    }
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(true);
+                      setShowMenu(false);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 16px",
+                      border: "none",
+                      background: "white",
+                      color: "#e53e3e",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontSize: 13,
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#fff5f5")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "white")
+                    }
+                  >
+                    🗑 Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Body */}
-      {post.body && (
+      {/* Body — FIX: render from postData so updates reflect immediately */}
+      {postData.body && (
         <div
           style={{
             padding: "0 14px 12px",
@@ -228,7 +413,7 @@ export default function PostCard({ post }) {
             lineHeight: 1.65,
           }}
         >
-          {post.body}
+          {postData.body}
         </div>
       )}
 
@@ -250,10 +435,10 @@ export default function PostCard({ post }) {
       )}
 
       {/* Image */}
-      <Link to={`/post/${post.id}`}>
-        {post.image ? (
+      <Link to={`/post/${postId}`}>
+        {postData.image ? (
           <img
-            src={post.image}
+            src={postData.image}
             alt="post"
             style={{
               width: "100%",
@@ -272,7 +457,7 @@ export default function PostCard({ post }) {
               fontSize: 15,
             }}
           >
-            {post.body}
+            {postData.body}
           </div>
         )}
       </Link>
@@ -342,10 +527,15 @@ export default function PostCard({ post }) {
               marginBottom: 12,
             }}
           >
-            <Avatar src="https://i.pravatar.cc/150?u=me" id="me" size={32} />
+            <Avatar
+              src={profileData?.photo ?? "https://i.pravatar.cc/150?u=me"}
+              id="me"
+              size={32}
+            />
             <input
               value={comment}
               onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCommentSubmit()}
               placeholder="Write a comment…"
               style={{
                 flex: 1,
@@ -370,14 +560,15 @@ export default function PostCard({ post }) {
               onClick={handleCommentSubmit}
               disabled={!comment.trim()}
               style={{
-                background: P,
+                background: comment.trim() ? P : PB,
                 border: "none",
                 borderRadius: 999,
                 color: "#fff",
                 fontWeight: 700,
                 fontSize: 12,
                 padding: "8px 14px",
-                cursor: "pointer",
+                cursor: comment.trim() ? "pointer" : "not-allowed",
+                transition: "background 0.2s",
               }}
             >
               Send
@@ -410,7 +601,7 @@ export default function PostCard({ post }) {
                 color: P,
                 fontWeight: 600,
                 fontSize: 12,
-                cursor: "pointer",
+                cursor: loading ? "not-allowed" : "pointer",
                 fontFamily: "inherit",
               }}
             >
@@ -419,6 +610,113 @@ export default function PostCard({ post }) {
           )}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        className="bg-pink-50"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader style={{ color: PT }}>Delete Post</ModalHeader>
+              <ModalBody style={{ fontSize: 14, color: "#3d1a28" }}>
+                Are you sure you want to delete this post? This action cannot be
+                undone.
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  variant="light"
+                  onPress={onClose}
+                  isDisabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="danger"
+                  isLoading={isDeleting}
+                  onPress={async () => {
+                    await handleDelete();
+                    onClose();
+                  }}
+                >
+                  Delete
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Update Post Modal */}
+      <Modal
+        isOpen={showUpdateModal}
+        onOpenChange={setShowUpdateModal}
+        className="bg-pink-50"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader style={{ color: PT }}>Edit Post</ModalHeader>
+              <ModalBody>
+                <Textarea
+                  label="Post content"
+                  placeholder="What's on your mind?"
+                  value={updatedText}
+                  onChange={(e) => setUpdatedText(e.target.value)}
+                  minRows={4}
+                />
+
+                {imagePreview && (
+                  <img
+                    src={imagePreview}
+                    alt="preview"
+                    style={{
+                      width: "100%",
+                      maxHeight: 250,
+                      objectFit: "cover",
+                      borderRadius: 12,
+                      marginTop: 10,
+                    }}
+                  />
+                )}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+
+                    if (file) {
+                      setUpdatedImage(file);
+                      setImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  style={{ marginTop: 10 }}
+                />
+              </ModalBody>
+              <ModalFooter>
+                <Button
+                  variant="light"
+                  onPress={onClose}
+                  isDisabled={isUpdating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="primary"
+                  isLoading={isUpdating}
+                  isDisabled={!updatedText.trim()}
+                  onPress={() => handleUpdate(onClose)}
+                >
+                  Save changes
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
